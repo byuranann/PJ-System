@@ -22,22 +22,98 @@ const SHEET_NAME = "Data";
 const HEADERS = ["Timestamp", "Field A", "Field B", "Field C"];
 
 /**
+ * Initialize sheet on first deployment
+ * This runs once when you first deploy the script
+ */
+function onOpen() {
+  initializeSheet();
+}
+
+/**
+ * Initialize the sheet with headers
+ */
+function initializeSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+  }
+  
+  // Check if sheet is empty or has no headers
+  const data = sheet.getDataRange().getValues();
+  
+  if (data.length === 0) {
+    // Sheet is completely empty - add headers
+    sheet.appendRow(HEADERS);
+    formatHeaders(sheet);
+  } else {
+    // Check if first row is headers
+    const firstRow = data[0];
+    const hasHeaders = HEADERS.every((header, index) => {
+      const cellValue = firstRow[index];
+      return cellValue && cellValue.toString().trim() === header;
+    });
+    
+    // If no headers, insert them at the top
+    if (!hasHeaders) {
+      sheet.insertRows(1);
+      sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+      formatHeaders(sheet);
+    }
+  }
+}
+
+/**
+ * Format the header row with styling
+ */
+function formatHeaders(sheet) {
+  const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
+  
+  // Apply formatting
+  headerRange.setFontWeight("bold");
+  headerRange.setBackground("#4f46e5");
+  headerRange.setFontColor("#ffffff");
+  headerRange.setFontSize(11);
+  headerRange.setBorder(true, true, true, true, true, true);
+  headerRange.setHorizontalAlignment("center");
+  
+  // Auto-resize columns
+  for (let i = 1; i <= HEADERS.length; i++) {
+    sheet.autoResizeColumn(i);
+  }
+  
+  // Freeze header row
+  sheet.setFrozenRows(1);
+}
+
+/**
  * Handle HTTP GET Requests - Fetches all records from Google Sheet
  */
 function doGet(e) {
   try {
-    const sheet = getOrCreateSheet();
-    const data = sheet.getDataRange().getValues();
+    initializeSheet(); // Ensure headers exist
     
-    // Ensure headers exist
-    ensureHeaders(sheet, data);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    
+    if (!sheet) {
+      return makeJsonResponse({
+        status: "error",
+        message: "Sheet not found"
+      }, 404);
+    }
+    
+    const data = sheet.getDataRange().getValues();
     
     // If empty or only header
     if (data.length <= 1) {
       return makeJsonResponse({
         status: "success",
         message: "No data records found",
-        data: []
+        data: [],
+        count: 0
       });
     }
     
@@ -51,27 +127,24 @@ function doGet(e) {
       
       // Map columns by header name
       for (let j = 0; j < headers.length; j++) {
-        const headerName = headers[j].toString().trim();
-        let cellValue = row[j];
-        
-        // Handle empty cells
-        if (cellValue === "" || cellValue === null || cellValue === undefined) {
-          cellValue = headerName === "Field B" ? 0 : "";
-        }
+        const headerName = headers[j] ? headers[j].toString().trim() : "";
+        let cellValue = row[j] || "";
         
         // Format timestamp
         if (headerName === "Timestamp") {
           if (cellValue instanceof Date) {
             record.timestamp = cellValue.toISOString();
-          } else if (typeof cellValue === "string") {
+          } else if (typeof cellValue === "string" && cellValue) {
             record.timestamp = cellValue;
-          } else {
+          } else if (cellValue) {
             record.timestamp = new Date(cellValue).toISOString();
+          } else {
+            record.timestamp = "";
           }
         } 
         // Field A (text)
         else if (headerName === "Field A") {
-          record.fieldA = cellValue.toString().trim();
+          record.fieldA = cellValue ? cellValue.toString().trim() : "";
         } 
         // Field B (number)
         else if (headerName === "Field B") {
@@ -84,7 +157,7 @@ function doGet(e) {
         }
       }
       
-      // Only include non-empty records
+      // Only include records that have at least a timestamp or fieldA
       if (record.timestamp || record.fieldA) {
         records.push(record);
       }
@@ -92,7 +165,9 @@ function doGet(e) {
     
     // Sort by timestamp (most recent first)
     records.sort((a, b) => {
-      return new Date(b.timestamp) - new Date(a.timestamp);
+      const timeA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return timeB - timeA;
     });
     
     return makeJsonResponse({
@@ -103,6 +178,7 @@ function doGet(e) {
     });
     
   } catch (error) {
+    Logger.log("GET Error: " + error.toString());
     return makeJsonResponse({
       status: "error",
       message: "GET Error: " + error.toString()
@@ -115,6 +191,9 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
+    // Initialize sheet before saving
+    initializeSheet();
+    
     if (!e || !e.postData || !e.postData.contents) {
       return makeJsonResponse({
         status: "error",
@@ -142,11 +221,18 @@ function doPost(e) {
       }, 400);
     }
     
-    // Get or create sheet
-    const sheet = getOrCreateSheet();
-    ensureHeaders(sheet, sheet.getDataRange().getValues());
+    // Get sheet
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
     
-    // Create new row
+    if (!sheet) {
+      return makeJsonResponse({
+        status: "error",
+        message: "Sheet not found"
+      }, 404);
+    }
+    
+    // Create new row with data
     const timestamp = new Date();
     const newRow = [
       timestamp,
@@ -170,88 +256,11 @@ function doPost(e) {
     });
     
   } catch (error) {
+    Logger.log("POST Error: " + error.toString());
     return makeJsonResponse({
       status: "error",
       message: "POST Error: " + error.toString()
     }, 500);
-  }
-}
-
-/**
- * Get or create the Data sheet with headers
- */
-function getOrCreateSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  
-  if (!sheet) {
-    // Create new sheet
-    sheet = ss.insertSheet(SHEET_NAME);
-    
-    // Add headers
-    sheet.appendRow(HEADERS);
-    
-    // Format header row
-    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#4f46e5");
-    headerRange.setFontColor("#ffffff");
-    headerRange.setBorder(true, true, true, true, true, true);
-    
-    // Auto-resize columns
-    for (let i = 1; i <= HEADERS.length; i++) {
-      sheet.autoResizeColumn(i);
-    }
-    
-    // Freeze header row
-    sheet.setFrozenRows(1);
-  }
-  
-  return sheet;
-}
-
-/**
- * Ensure headers exist in the sheet
- * If the sheet exists but has no headers, add them
- */
-function ensureHeaders(sheet, currentData) {
-  // If sheet is empty, add headers
-  if (!currentData || currentData.length === 0) {
-    sheet.appendRow(HEADERS);
-    
-    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#4f46e5");
-    headerRange.setFontColor("#ffffff");
-    headerRange.setBorder(true, true, true, true, true, true);
-    
-    for (let i = 1; i <= HEADERS.length; i++) {
-      sheet.autoResizeColumn(i);
-    }
-    
-    sheet.setFrozenRows(1);
-    return;
-  }
-  
-  // Check if first row looks like data, not headers
-  const firstRow = currentData[0];
-  const isHeaderRow = HEADERS.every((header, index) => {
-    const cellValue = firstRow[index];
-    return cellValue && cellValue.toString().trim() === header;
-  });
-  
-  // If first row is not headers, insert headers at top
-  if (!isHeaderRow) {
-    sheet.insertRows(1);
-    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
-    
-    const headerRange = sheet.getRange(1, 1, 1, HEADERS.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#4f46e5");
-    headerRange.setFontColor("#ffffff");
-    headerRange.setBorder(true, true, true, true, true, true);
-    
-    sheet.setFrozenRows(1);
   }
 }
 
@@ -276,7 +285,7 @@ function validateAndSanitize(payload) {
   }
   
   // Field B (required, number)
-  if (payload.fieldB === undefined || payload.fieldB === null) {
+  if (payload.fieldB === undefined || payload.fieldB === null || payload.fieldB === "") {
     return {
       valid: false,
       error: "Validation Error: Field B is required"
