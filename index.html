@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Crect width='24' height='24' rx='6' fill='%236366f1'/%3E%3Cpath d='M8 16V10M12 16V7M16 16V12' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark">
+    <title>SheetSync - Analytics Dashboard</title>
+
+    <!-- Prevent Flash of Un-themed Content (FOUC) -->
+    <script>
+      (function() {
+        const theme = localStorage.getItem('google_sheets_dashboard_theme');
+        if (theme === 'dark' || theme === 'light') {
+          document.documentElement.setAttribute('data-theme', theme);
+        } else {
+          // Default to system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <!-- App Container Shell -->
+    <div class="app-container">
+      
+      <!-- 1. Sidebar Navigation (Desktop) -->
+      <aside class="sidebar">
+        <div>
+          <!-- Brand Logo -->
+          <div class="sidebar-brand">
+            <div class="sidebar-logo">S</div>
+            <span class="sidebar-title">SheetSync</span>
+          </div>
+
+          <!-- Menu items -->
+          <nav>
+            <ul class="sidebar-menu">
+              <li class="sidebar-item active" data-page="dashboard">
+                <a href="#dashboard">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+                  </svg>
+                  Dashboard
+                </a>
+              </li>
+              <li class="sidebar-item" data-page="form">
+                <a href="#form">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Data Entry Form
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        <!-- Sidebar footer Actions (Theme & Settings) -->
+        <div class="sidebar-footer">
+          <button id="sidebar-btn-theme" class="sidebar-action-btn" aria-label="Toggle Color Theme">
+            <!-- Sun Icon -->
+            <svg class="theme-icon-light" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display: none;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+            </svg>
+            <!-- Moon Icon -->
+            <svg class="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+            </svg>
+            <span id="theme-btn-text">Dark Mode</span>
+          </button>
+          
+          <button id="sidebar-btn-settings" class="sidebar-action-btn" aria-label="Open API settings">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.991l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869l.214-1.28z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            API Settings
+          </button>
+        </div>
+      </aside>
+
+      <!-- 2. Mobile Bottom Navigation -->
+      <nav class="mobile-nav">
+        <ul class="mobile-menu">
+          <li class="mobile-item active" data-page="dashboard">
+            <a href="#dashboard">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+              </svg>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="mobile-item" data-page="form">
+            <a href="#form">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Data Entry</span>
+            </a>
+          </li>
+          <li class="mobile-item" id="mobile-btn-settings">
+            <a href="#settings">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Settings</span>
+            </a>
+          </li>
+          <li class="mobile-item" id="mobile-btn-theme">
+            <a href="#theme">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+              <span>Theme</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- 3. Main Workspace Wrapper -->
+      <main class="main-wrapper">
+        <!-- Header -->
+        <header class="main-header">
+          <h1 class="header-title" id="active-view-title">Dashboard</h1>
+          <div class="header-actions">
+            <!-- API Connection Indicator Status -->
+            <div class="api-status status-unconfigured" id="header-api-status-badge">
+              Not Connected
+            </div>
+          </div>
+        </header>
+
+        <!-- Dynamic Content Mount Point -->
+        <section class="main-content" id="app-content">
+          <!-- Views rendered dynamically -->
+        </section>
+      </main>
+
+    </div>
+
+    <!-- 4. Global Toast Notification Container -->
+    <div class="toast-container" id="global-toast-container" aria-live="assertive"></div>
+
+    <!-- 5. Settings Modal (Google Sheets API Settings) -->
+    <div class="modal-overlay" id="settings-modal-overlay">
+      <div class="modal" role="dialog" aria-labelledby="modal-title-heading" aria-modal="true">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-title-heading">Google Sheets Integration Settings</h2>
+          <button class="modal-close-btn" id="btn-close-settings-x" aria-label="Close settings">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form id="settings-modal-form">
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label for="settings-api-url">Google Apps Script Web App URL</label>
+            <input 
+              type="url" 
+              id="settings-api-url" 
+              name="apiUrl" 
+              class="form-input" 
+              placeholder="https://script.google.com/macros/s/.../exec"
+              required
+            >
+            <span class="form-hint">Paste the "Web app URL" generated during your Google Apps Script deployment.</span>
+          </div>
+
+          <div class="form-hint" style="background-color: var(--color-brand-light); color: var(--text-muted); padding: 12px; border-radius: var(--radius-sm); border-left: 3px solid var(--color-brand); margin-bottom: 24px; line-height: 1.4;">
+            <strong>Setup Checklist:</strong>
+            <ul style="margin-left: 18px; margin-top: 4px;">
+              <li>Execute as: <strong>Me</strong> (your email)</li>
+              <li>Who has access: <strong>Anyone</strong> (necessary for CORS)</li>
+              <li>Make sure you authorize the App script permissions on deploy.</li>
+            </ul>
+          </div>
+
+          <div class="form-actions" style="margin-top: 0;">
+            <button type="button" id="btn-close-settings" class="btn btn-secondary" style="min-height: 40px; padding: 0 16px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="min-height: 40px; padding: 0 16px;">Save Connection</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Main Entry Module -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
