@@ -1,7 +1,7 @@
 import type { DataRow, ApiResponse } from './types';
 
 // Key for storage
-const API_URL_KEY = 'google_sheets_api_url';
+const API_URL_KEY = "https://script.google.com/macros/s/AKfycbxHYH69t12DesJHQQfWb3Yk_cc-LvGRr9fIrKkzRiYNY8NpQxThaHwvV05Xs05PffI/exec";
 
 /**
  * Retrieve the active Google Apps Script Web App URL from localStorage or build environment.
