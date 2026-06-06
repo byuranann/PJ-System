@@ -63,6 +63,29 @@ export async function fetchData(): Promise<ApiResponse<DataRow[]>> {
     }
 
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      return { 
+        status: 'error', 
+        message: 'Invalid API response format. Expected a valid JSON object.' 
+      };
+    }
+
+    if (data.status === 'error') {
+      return { 
+        status: 'error', 
+        message: data.message || 'API returned an error status.' 
+      };
+    }
+
+    if (!Array.isArray(data.data)) {
+      return { 
+        status: 'error', 
+        message: 'Invalid API response format. Expected an array of records in the data field.' 
+      };
+    }
+
     return data as ApiResponse<DataRow[]>;
   } catch (error) {
     console.error('API Fetch Error:', error);
@@ -107,6 +130,15 @@ export async function submitData(row: Omit<DataRow, 'timestamp'>): Promise<ApiRe
     }
 
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      return { 
+        status: 'error', 
+        message: 'Invalid API response format.' 
+      };
+    }
+
     return data as ApiResponse<DataRow>;
   } catch (error) {
     console.error('API Submission Error:', error);
