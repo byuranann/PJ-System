@@ -124,3 +124,4 @@ Because SheetSync compiles into vanilla HTML, CSS, and JS (SPA), the `dist/` dir
 * **Validation Lifecycles**: Strict `:user-invalid` triggers validation states only after users exit (`blur`) a form group, avoiding annoying intrusive validation flags while typing.
 * **Memory Leak Avoidance**: Chart.js objects are correctly disposed of using `.destroy()`, and intervals/timers are fully cleared when switching pages in the SPA shell router.
 * **No FOUC (Flash of Unstyled Content)**: An inline parser in the HTML `<head>` runs immediately before document parsing to inject the user's saved light/dark mode preference.
+# PJ
