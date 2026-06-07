@@ -1,34 +1,20 @@
 import type { DataRow, ApiResponse } from './types';
 
-// Key for storage
-const API_URL_KEY = "https://script.google.com/macros/s/AKfycbxHYH69t12DesJHQQfWb3Yk_cc-LvGRr9fIrKkzRiYNY8NpQxThaHwvV05Xs05PffI/exec";
+// Static API URL - hardcoded Google Apps Script Web App URL
+const STATIC_API_URL = 'https://script.google.com/macros/s/AKfycbxHYH69t12DesJHQQfWb3Yk_cc-LvGRr9fIrKkzRiYNY8NpQxThaHwvV05Xs05PffI/exec';
 
 /**
- * Retrieve the active Google Apps Script Web App URL from localStorage or build environment.
+ * Retrieve the Google Apps Script Web App URL (static/hardcoded).
  */
 export function getApiUrl(): string | null {
-  return localStorage.getItem(API_URL_KEY) || (import.meta.env.VITE_API_URL as string) || null;
+  return STATIC_API_URL;
 }
 
 /**
- * Store the Google Apps Script Web App URL in localStorage.
- */
-export function setApiUrl(url: string): void {
-  // Trim whitespaces
-  const cleanedUrl = url.trim();
-  if (cleanedUrl) {
-    localStorage.setItem(API_URL_KEY, cleanedUrl);
-  } else {
-    localStorage.removeItem(API_URL_KEY);
-  }
-}
-
-/**
- * Check if the API URL is configured and has a valid Apps Script macro structure.
+ * API is always configured since the URL is hardcoded.
  */
 export function isApiConfigured(): boolean {
-  const url = getApiUrl();
-  return !!url && url.startsWith('https://script.google.com/macros/');
+  return true;
 }
 
 /**
@@ -37,9 +23,9 @@ export function isApiConfigured(): boolean {
 export async function fetchData(): Promise<ApiResponse<DataRow[]>> {
   const url = getApiUrl();
   if (!url) {
-    return { 
-      status: 'error', 
-      message: 'Google Apps Script URL is not configured. Please click the Settings gear icon to configure it.' 
+    return {
+      status: 'error',
+      message: 'Google Apps Script URL is not configured.'
     };
   }
 
@@ -63,26 +49,26 @@ export async function fetchData(): Promise<ApiResponse<DataRow[]>> {
     }
 
     const data = await response.json();
-    
+
     // Validate response structure
     if (!data || typeof data !== 'object') {
-      return { 
-        status: 'error', 
-        message: 'Invalid API response format. Expected a valid JSON object.' 
+      return {
+        status: 'error',
+        message: 'Invalid API response format. Expected a valid JSON object.'
       };
     }
 
     if (data.status === 'error') {
-      return { 
-        status: 'error', 
-        message: data.message || 'API returned an error status.' 
+      return {
+        status: 'error',
+        message: data.message || 'API returned an error status.'
       };
     }
 
     if (!Array.isArray(data.data)) {
-      return { 
-        status: 'error', 
-        message: 'Invalid API response format. Expected an array of records in the data field.' 
+      return {
+        status: 'error',
+        message: 'Invalid API response format. Expected an array of records in the data field.'
       };
     }
 
@@ -91,8 +77,8 @@ export async function fetchData(): Promise<ApiResponse<DataRow[]>> {
     console.error('API Fetch Error:', error);
     return {
       status: 'error',
-      message: error instanceof Error 
-        ? error.message 
+      message: error instanceof Error
+        ? error.message
         : 'Failed to connect to Google Apps Script. Please verify the URL is correct and deployed as "Anyone".'
     };
   }
@@ -104,9 +90,9 @@ export async function fetchData(): Promise<ApiResponse<DataRow[]>> {
 export async function submitData(row: Omit<DataRow, 'timestamp'>): Promise<ApiResponse<DataRow>> {
   const url = getApiUrl();
   if (!url) {
-    return { 
-      status: 'error', 
-      message: 'Google Apps Script URL is not configured. Please configure it in settings.' 
+    return {
+      status: 'error',
+      message: 'Google Apps Script URL is not configured.'
     };
   }
 
@@ -130,12 +116,12 @@ export async function submitData(row: Omit<DataRow, 'timestamp'>): Promise<ApiRe
     }
 
     const data = await response.json();
-    
+
     // Validate response structure
     if (!data || typeof data !== 'object') {
-      return { 
-        status: 'error', 
-        message: 'Invalid API response format.' 
+      return {
+        status: 'error',
+        message: 'Invalid API response format.'
       };
     }
 
@@ -144,9 +130,9 @@ export async function submitData(row: Omit<DataRow, 'timestamp'>): Promise<ApiRe
     console.error('API Submission Error:', error);
     return {
       status: 'error',
-      message: error instanceof Error 
-        ? error.message 
-        : 'Failed to submit data. Please check your network connection and API configuration.'
+      message: error instanceof Error
+        ? error.message
+        : 'Failed to submit data. Please check your network connection.'
     };
   }
 }

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: "/PJ-System-main/",
+  base: "/",
   server: {
     port: 3000,
     open: true

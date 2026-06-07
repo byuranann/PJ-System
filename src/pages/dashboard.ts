@@ -1,7 +1,48 @@
 import { Chart, registerables } from 'chart.js';
-import { fetchData, isApiConfigured } from '../api';
+import { fetchData } from '../api';
 import type { DataRow } from '../types';
 import { calculateSummary, formatDate, formatNumber, sanitize } from '../utils/helpers';
+
+// Language key for translations
+const LANGUAGE_KEY = 'google_sheets_dashboard_language';
+
+// Translation Dictionary (local copy for dashboard)
+const translations = {
+  en: {
+    totalRecords: 'Total Records',
+    averageValue: 'Average Value (B)',
+    maxValue: 'Max Value (B)',
+    minValue: 'Min Value (B)',
+    timestamp: 'Timestamp',
+    fieldAHeader: 'Field A',
+    fieldBHeader: 'Field B',
+    fieldCHeader: 'Field C',
+    noRecordsFound: 'No Records Found',
+    apiRetrieveFailure: 'API Retrieve Failure:',
+    showEntries: 'Show',
+    entries: 'entries',
+    showing: 'Showing',
+    to: 'to',
+    of: 'of'
+  },
+  th: {
+    totalRecords: 'จำนวนรายการทั้งหมด',
+    averageValue: 'ค่าเฉลี่ย (B)',
+    maxValue: 'ค่าสูงสุด (B)',
+    minValue: 'ค่าต่ำสุด (B)',
+    timestamp: 'เวลาที่บันทึก',
+    fieldAHeader: 'ฟิลด์ A',
+    fieldBHeader: 'ฟิลด์ B',
+    fieldCHeader: 'ฟิลด์ C',
+    noRecordsFound: 'ไม่พบรายการ',
+    apiRetrieveFailure: 'ความล้มเหลวในการดึงข้อมูล API:',
+    showEntries: 'แสดง',
+    entries: 'รายการ',
+    showing: 'แสดง',
+    to: 'ถึง',
+    of: 'จากทั้งหมด'
+  }
+};
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -45,13 +86,13 @@ export function renderDashboardPage(
       <!-- Toolbar: Manual Refresh and Auto Refresh Status -->
       <div class="table-toolbar" style="margin-bottom: 24px;">
         <div>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Real-time analytics and data summary from Google Sheets.</p>
+          <p style="color: var(--text-muted); font-size: 0.9rem;" data-translate="realTimeAnalytics">Real-time analytics and data summary from Google Sheets.</p>
         </div>
         <div class="header-actions">
           <div class="refresh-countdown" id="refresh-countdown-container">
-            <span class="countdown-text">Refreshing in <strong id="countdown-sec">60</strong>s</span>
+            <span class="countdown-text" data-translate="refreshingIn">Refreshing in</span> <strong id="countdown-sec">60</strong><span data-translate="seconds">s</span>
           </div>
-          <button id="btn-manual-refresh" class="btn btn-secondary" style="min-height: 40px; padding: 0 16px;">
+          <button id="btn-manual-refresh" class="btn btn-secondary" style="min-height: 40px; padding: 0 16px;" data-translate-value="btnRefresh">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16" id="refresh-icon">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
@@ -73,11 +114,11 @@ export function renderDashboardPage(
         <!-- Left: Line / Bar combo card -->
         <div class="card chart-card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 1rem;">Values Trend & Analysis</h3>
+            <h3 style="font-size: 1rem;" data-translate="trendAnalysis">Values Trend & Analysis</h3>
             <div class="page-size-selector" style="font-size: 0.8rem;">
               <select id="chart-type-selector">
-                <option value="line">Line Chart (Trend Over Time)</option>
-                <option value="bar">Bar Chart (Averages by Category)</option>
+                <option value="line" data-translate="lineChart">Line Chart (Trend Over Time)</option>
+                <option value="bar" data-translate="barChart">Bar Chart (Averages by Category)</option>
               </select>
             </div>
           </div>
@@ -85,10 +126,10 @@ export function renderDashboardPage(
             <canvas id="trend-analysis-chart"></canvas>
           </div>
         </div>
-        
+
         <!-- Right: Pie share distribution card -->
         <div class="card chart-card">
-          <h3 style="font-size: 1rem; margin-bottom: 16px;">Category Distribution</h3>
+          <h3 style="font-size: 1rem; margin-bottom: 16px;" data-translate="categoryDistribution">Category Distribution</h3>
           <div class="chart-container">
             <canvas id="category-distribution-chart"></canvas>
           </div>
@@ -98,15 +139,15 @@ export function renderDashboardPage(
       <!-- Data Table Card -->
       <div class="card" style="padding: 0; overflow: hidden;" id="table-card-container">
         <div style="padding: 24px 24px 8px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-          <h3 style="font-size: 1.1rem;">Data Records</h3>
+          <h3 style="font-size: 1.1rem;" data-translate="dataRecords">Data Records</h3>
           <div class="search-wrapper">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input type="text" id="table-search" class="search-input" placeholder="Search rows...">
+            <input type="text" id="table-search" class="search-input" placeholder="" data-translate-placeholder="searchPlaceholder">
           </div>
         </div>
-        
+
         <!-- Table container wrapper -->
         <div id="table-responsive-wrapper">
           <!-- Table element is loaded here -->
@@ -165,11 +206,6 @@ export function renderDashboardPage(
 
   // 4. Fetch and Load Data
   const loadData = async (silent = false) => {
-    if (!isApiConfigured()) {
-      renderUnconfiguredState();
-      return;
-    }
-
     if (!silent) {
       destroyCharts();
       renderSkeletons();
@@ -212,19 +248,19 @@ export function renderDashboardPage(
     const stats = calculateSummary(data);
     summaryContainer.innerHTML = `
       <div class="card metric-card">
-        <span class="metric-label">Total Records</span>
+        <span class="metric-label" data-translate="totalRecords">Total Records</span>
         <span class="metric-value">${stats.totalRecords}</span>
       </div>
       <div class="card metric-card">
-        <span class="metric-label">Average Value (B)</span>
+        <span class="metric-label" data-translate="averageValue">Average Value (B)</span>
         <span class="metric-value">${formatNumber(stats.avgFieldB)}</span>
       </div>
       <div class="card metric-card">
-        <span class="metric-label">Max Value (B)</span>
+        <span class="metric-label" data-translate="maxValue">Max Value (B)</span>
         <span class="metric-value">${formatNumber(stats.maxFieldB)}</span>
       </div>
       <div class="card metric-card">
-        <span class="metric-label">Min Value (B)</span>
+        <span class="metric-label" data-translate="minValue">Min Value (B)</span>
         <span class="metric-value">${formatNumber(stats.minFieldB)}</span>
       </div>
     `;
@@ -316,9 +352,10 @@ export function renderDashboardPage(
     };
 
     if (totalRecords === 0) {
+      const lang = translations[localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations || 'en'];
       tableWrapper.innerHTML = `
         <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-          No matching records found for search queries.
+          ${lang.noRecordsFound}
         </div>
       `;
       return;
@@ -329,10 +366,10 @@ export function renderDashboardPage(
         <table class="data-table">
           <thead>
             <tr>
-              <th class="sortable" data-col="timestamp">Timestamp ${getSortIndicator('timestamp')}</th>
-              <th class="sortable" data-col="fieldA">Field A ${getSortIndicator('fieldA')}</th>
-              <th class="sortable" data-col="fieldB">Field B ${getSortIndicator('fieldB')}</th>
-              <th class="sortable" data-col="fieldC">Field C ${getSortIndicator('fieldC')}</th>
+              <th class="sortable" data-col="timestamp" data-translate="timestamp">Timestamp ${getSortIndicator('timestamp')}</th>
+              <th class="sortable" data-col="fieldA" data-translate="fieldAHeader">Field A ${getSortIndicator('fieldA')}</th>
+              <th class="sortable" data-col="fieldB" data-translate="fieldBHeader">Field B ${getSortIndicator('fieldB')}</th>
+              <th class="sortable" data-col="fieldC" data-translate="fieldCHeader">Field C ${getSortIndicator('fieldC')}</th>
             </tr>
           </thead>
           <tbody>
@@ -351,23 +388,23 @@ export function renderDashboardPage(
         
         <div class="pagination">
           <div class="page-size-selector">
-            Show 
+            <span data-translate="showEntries">Show</span>
             <select id="select-page-size">
               <option value="5" ${pageSize === 5 ? 'selected' : ''}>5</option>
               <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
               <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
               <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
             </select>
-            entries
+            <span data-translate="entries">entries</span>
           </div>
           <div>
-            Showing ${startIdx + 1} to ${endIdx} of ${totalRecords} entries
+            <span data-translate="showing">Showing</span> ${startIdx + 1} <span data-translate="to">to</span> ${endIdx} <span data-translate="of">of</span> ${totalRecords} <span data-translate="entries">entries</span>
           </div>
           <div class="pagination-controls">
-            <button id="btn-page-prev" class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''}>
+            <button id="btn-page-prev" class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} data-translate-value="btnPrev">
               Prev
             </button>
-            <button id="btn-page-next" class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''}>
+            <button id="btn-page-next" class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} data-translate-value="btnNext">
               Next
             </button>
           </div>
@@ -640,9 +677,9 @@ export function renderDashboardPage(
         <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h3 class="empty-state-title">No Records Found</h3>
-        <p class="empty-state-desc">The connected Google Sheet is currently empty. Start by submitting entries via the Data Entry form.</p>
-        <button id="btn-empty-add" class="btn btn-primary">
+        <h3 class="empty-state-title" data-translate="noRecordsFound">No Records Found</h3>
+        <p class="empty-state-desc" data-translate="noRecordsDesc">The connected Google Sheet is currently empty. Start by submitting entries via the Data Entry form.</p>
+        <button id="btn-empty-add" class="btn btn-primary" data-translate-value="btnEmptyAdd">
           Add First Entry
         </button>
       </div>
@@ -660,9 +697,9 @@ export function renderDashboardPage(
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
           </svg>
-          <strong>API Retrieve Failure:</strong> ${sanitize(msg)}
+          <strong data-translate="apiRetrieveFailure">API Retrieve Failure:</strong> ${sanitize(msg)}
         </div>
-        <button id="btn-error-retry" class="btn btn-secondary" style="min-height: 36px; padding: 0 12px; font-size: 0.8rem;">
+        <button id="btn-error-retry" class="btn btn-secondary" style="min-height: 36px; padding: 0 12px; font-size: 0.8rem;" data-translate-value="btnRetry">
           Retry
         </button>
       </div>
@@ -671,31 +708,7 @@ export function renderDashboardPage(
     document.getElementById('btn-error-retry')?.addEventListener('click', () => loadData(false));
   };
 
-  const renderUnconfiguredState = () => {
-    summaryContainer.innerHTML = '';
-    destroyCharts();
-    tableWrapper.innerHTML = `
-      <div class="empty-state" style="border-style: solid; border-color: var(--color-warning);">
-        <svg class="empty-state-icon" style="color: var(--color-warning);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <h3 class="empty-state-title" style="color: var(--color-warning);">API Endpoint Unconfigured</h3>
-        <p class="empty-state-desc">The dashboard is missing a Google Apps Script Web App URL. Please click the button below to paste your URL.</p>
-        <button id="btn-configure-now" class="btn btn-primary" style="background-color: var(--color-warning); box-shadow: 0 4px 12px rgba(245,158,11,0.2);">
-          Open Settings Modal
-        </button>
-      </div>
-    `;
-
-    document.getElementById('btn-configure-now')?.addEventListener('click', () => {
-      // Find settings btn in sidebar and click it
-      const settingsBtn = document.getElementById('sidebar-btn-settings') || document.getElementById('mobile-btn-settings');
-      if (settingsBtn) {
-        settingsBtn.click();
-      }
-    });
-  };
+  // 8. Custom State Renderers
 
   // 9. Auto Refresh Timers & Controls
   const startRefreshCountdown = () => {

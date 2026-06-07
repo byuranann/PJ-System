@@ -1,5 +1,5 @@
 import './style.css';
-import { isApiConfigured, getApiUrl, setApiUrl } from './api';
+import './api';
 import { renderFormPage } from './pages/form';
 import { renderDashboardPage } from './pages/dashboard';
 import type { ViewPage } from './types';
@@ -14,8 +14,8 @@ let activeViewCleanup: (() => void) | null = null;
 // 1. Toast Notification System
 // ==========================================================================
 export function showToast(
-  title: string, 
-  msg: string, 
+  title: string,
+  msg: string,
   type: 'success' | 'error' | 'warning' = 'success'
 ): void {
   const container = document.getElementById('global-toast-container');
@@ -71,83 +71,194 @@ export function showToast(
 }
 
 // ==========================================================================
-// 2. Settings Modal Control
-// ==========================================================================
-const settingsOverlay = document.getElementById('settings-modal-overlay') as HTMLElement;
-const settingsForm = document.getElementById('settings-modal-form') as HTMLFormElement;
-const inputApiUrl = document.getElementById('settings-api-url') as HTMLInputElement;
-
-export function openSettingsModal(): void {
-  const currentUrl = getApiUrl();
-  if (currentUrl) {
-    inputApiUrl.value = currentUrl;
-  }
-  settingsOverlay.classList.add('active');
-  inputApiUrl.focus();
-}
-
-function closeSettingsModal(): void {
-  settingsOverlay.classList.remove('active');
-  settingsForm.reset();
-}
-
-// Setup Settings Handlers
-document.getElementById('sidebar-btn-settings')?.addEventListener('click', openSettingsModal);
-document.getElementById('mobile-btn-settings')?.addEventListener('click', (e) => {
-  e.preventDefault();
-  openSettingsModal();
-});
-document.getElementById('btn-close-settings-x')?.addEventListener('click', closeSettingsModal);
-document.getElementById('btn-close-settings')?.addEventListener('click', closeSettingsModal);
-
-settingsForm?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const url = inputApiUrl.value.trim();
-  
-  if (!url.startsWith('https://script.google.com/macros/')) {
-    showToast('Invalid URL', 'Please paste a valid Google Apps Script Web App URL.', 'error');
-    return;
-  }
-
-  setApiUrl(url);
-  updateApiStatusIndicator();
-  closeSettingsModal();
-  showToast('Connection Saved', 'Google Sheets endpoint updated successfully.', 'success');
-  
-  // Reload current page to pull new data
-  handleRouting();
-});
-
-// Close modal if user clicks background overlay
-settingsOverlay?.addEventListener('click', (e) => {
-  if (e.target === settingsOverlay) {
-    closeSettingsModal();
-  }
-});
-
-// ==========================================================================
-// 3. Theme Manager (Dark / Light Theme Toggle)
+// 2. Language & Theme Manager
 // ==========================================================================
 const sidebarBtnTheme = document.getElementById('sidebar-btn-theme') as HTMLButtonElement;
 const mobileBtnTheme = document.getElementById('mobile-btn-theme') as HTMLElement;
 const themeText = document.getElementById('theme-btn-text') as HTMLElement;
 
+// Language Storage Key
+const LANGUAGE_KEY = 'google_sheets_dashboard_language';
+
+// Translation Dictionary
+const translations = {
+  en: {
+    // Common
+    appName: 'PJ System',
+    dashboard: 'Dashboard',
+    form: 'Data Entry Form',
+    theme: 'Theme',
+    lightMode: 'Light Mode',
+    darkMode: 'Dark Mode',
+    english: 'English',
+    thai: 'Thai',
+
+    // Header
+    activeViewTitle: 'Dashboard',
+    connected: 'Connected',
+
+    // Sidebar
+    sidebarTitle: 'PJ System',
+    collectNewData: 'Collect New Data',
+    submitEntries: 'Submit entries directly to your connected Google Sheet.',
+
+    // Form Page
+    formTitle: 'Collect New Data',
+    formDescription: 'Submit entries directly to your connected Google Sheet.',
+    fieldALabel: 'Product Type',
+    fieldBLabel: 'Weight',
+    fieldCLabel: 'Name',
+    fieldAPlaceholder: 'e.g. Sales, Marketing, Project Alpha',
+    fieldBPlaceholder: 'e.g. 150.50, 42',
+    fieldCPlaceholder: 'e.g. Quarterly review notes (optional)',
+    fieldAError: 'Product Type is required and cannot be empty.',
+    fieldBError: 'Weight is required and must be a valid number.',
+    fieldCError: 'Name cannot exceed 500 characters.',
+    fieldAHint: 'Enter the main label or category name (max 250 characters).',
+    fieldBHint: 'Enter any positive or negative numeric value.',
+    fieldCHint: 'Add any additional notes (max 500 characters, optional).',
+    btnClear: 'Reset Form',
+    btnSubmit: 'Submit Entry',
+
+    // Toast Messages
+    toastSuccessTitle: 'Success',
+    toastErrorTitle: 'Error',
+    toastWarningTitle: 'Warning',
+    validationError: 'Validation Error',
+    validationErrorMsg: 'Please check the highlighted fields and try again.',
+    submissionFailed: 'Submission Failed',
+    submissionFailedMsg: 'Could not connect to Google Apps Script. Please verify your connection and URL.',
+
+    // Dashboard
+    realTimeAnalytics: 'Real-time analytics and data summary from Google Sheets.',
+    refresh: 'Refresh',
+    refreshingIn: 'Refreshing in',
+    seconds: 's',
+    noRecordsFound: 'No Records Found',
+    noRecordsDesc: 'The connected Google Sheet is currently empty. Start by submitting entries via the Data Entry form.',
+    addFirstEntry: 'Add First Entry',
+    apiRetrieveFailure: 'API Retrieve Failure:',
+    retry: 'Retry',
+    totalRecords: 'Total Records',
+    averageValue: 'Average Value (B)',
+    maxValue: 'Max Value (B)',
+    minValue: 'Min Value (B)',
+    searchPlaceholder: 'Search rows...',
+    showEntries: 'Show',
+    entries: 'entries',
+    showing: 'Showing',
+    to: 'to',
+    of: 'of',
+    prev: 'Prev',
+    next: 'Next',
+    trendAnalysis: 'Values Trend & Analysis',
+    categoryDistribution: 'Category Distribution',
+    lineChart: 'Line Chart (Trend Over Time)',
+    barChart: 'Bar Chart (Averages by Category)',
+    dataRecords: 'Data Records',
+    timestamp: 'Timestamp',
+    fieldAHeader: 'Field A',
+    fieldBHeader: 'Field B',
+    fieldCHeader: 'Field C'
+  },
+  th: {
+    // Common
+    appName: 'ระบบ PJ',
+    dashboard: 'แดชบอร์ด',
+    form: 'ฟอร์มกรอกข้อมูล',
+    theme: 'ธีม',
+    lightMode: 'โหมดสว่าง',
+    darkMode: 'โหมดมืด',
+    english: 'ภาษาอังกฤษ',
+    thai: 'ภาษาไทย',
+
+    // Header
+    activeViewTitle: 'แดชบอร์ด',
+    connected: 'เชื่อมต่อแล้ว',
+
+    // Sidebar
+    sidebarTitle: 'ระบบ PJ',
+    collectNewData: 'เก็บข้อมูลใหม่',
+    submitEntries: 'ส่งรายการโดยตรงไปยัง Google Sheet ที่เชื่อมต่อของคุณ',
+
+    // Form Page
+    formTitle: 'เก็บข้อมูลใหม่',
+    formDescription: 'ส่งรายการโดยตรงไปยัง Google Sheet ที่เชื่อมต่อของคุณ.',
+    fieldALabel: 'ชนิดสินค้า',
+    fieldBLabel: 'น้ำหนัก',
+    fieldCLabel: 'ชื่อ',
+    fieldAPlaceholder: 'เช่น ยอดขาย การตลาด โครงการอัลฟ่า',
+    fieldBPlaceholder: 'เช่น 150.50, 42',
+    fieldCPlaceholder: 'เช่น โน้ตรายไตรมาส (ตัวเลือก)',
+    fieldAError: 'ชนิดสินค้าเป็นสิ่งจำเป็นและไม่สามารถเว้นว่างได้.',
+    fieldBError: 'น้ำหนักเป็นสิ่งจำเป็นและต้องเป็นตัวเลขที่ถูกต้อง.',
+    fieldCError: 'ชื่อไม่สามารถเกิน 500 ตัวอักษรได้.',
+    fieldAHint: 'ป้อนป้ายกำกับหรือหมวดหมู่หลัก (สูงสุด 250 ตัวอักษร).',
+    fieldBHint: 'ป้อนค่าตัวเลขบวกหรือลบใดๆ ก็ได้.',
+    fieldCHint: 'เพิ่มหมายเหตุเพิ่มเติม (สูงสุด 500 ตัวอักษร, ตัวเลือก).',
+    btnClear: 'รีเซ็ตฟอร์ม',
+    btnSubmit: 'ส่งรายการ',
+
+    // Toast Messages
+    toastSuccessTitle: 'สำเร็จ',
+    toastErrorTitle: 'ข้อผิดพลาด',
+    toastWarningTitle: 'คำเตือน',
+    validationError: 'ข้อผิดพลาดในการตรวจสอบ',
+    validationErrorMsg: 'กรุณาตรวจสอบฟิลด์ที่ไฮไลต์และลองอีกครั้ง.',
+    submissionFailed: 'การส่งล้มเหลว',
+    submissionFailedMsg: 'ไม่สามารถเชื่อมต่อกับ Google Apps Script ได้ กรุณาตรวจสอบการเชื่อมต่อและ URL ของคุณ.',
+
+    // Dashboard
+    realTimeAnalytics: 'การวิเคราะห์และสรุปข้อมูลแบบเรียลไทม์จาก Google Sheets.',
+    refresh: 'รีเฟรช',
+    refreshingIn: 'กำลังรีเฟรชในอีก',
+    seconds: 'วินาที',
+    noRecordsFound: 'ไม่พบรายการ',
+    noRecordsDesc: 'Google Sheet ที่เชื่อมต่อว่างเปล่าในขณะนี้. เริ่มต้นโดยส่งรายการผ่านฟอร์มกรอกข้อมูล.',
+    addFirstEntry: 'เพิ่มรายการแรก',
+    apiRetrieveFailure: 'ความล้มเหลวในการดึงข้อมูล API:',
+    retry: 'ลองใหม่',
+    totalRecords: 'จำนวนรายการทั้งหมด',
+    averageValue: 'ค่าเฉลี่ย (B)',
+    maxValue: 'ค่าสูงสุด (B)',
+    minValue: 'ค่าต่ำสุด (B)',
+    searchPlaceholder: 'ค้นหาแถว...',
+    showEntries: 'แสดง',
+    entries: 'รายการ',
+    showing: 'แสดง',
+    to: 'ถึง',
+    of: 'จากทั้งหมด',
+    prev: 'ก่อนหน้า',
+    next: 'ถัดไป',
+    trendAnalysis: 'แนวโน้มและการวิเคราะห์ค่า',
+    categoryDistribution: 'การกระจายประเภท',
+    lineChart: 'กราฟเส้น (แนวโน้มตามเวลา)',
+    barChart: 'กราฟแท่ง (ค่าเฉลี่ยตามหมวดหมู่)',
+    dataRecords: 'รายการข้อมูล',
+    timestamp: 'เวลาที่บันทึก',
+    fieldAHeader: 'ฟิลด์ A',
+    fieldBHeader: 'ฟิลด์ B',
+    fieldCHeader: 'ฟิลด์ C'
+  }
+};
+
 function applyTheme(theme: 'light' | 'dark'): void {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(THEME_KEY, theme);
-  
+
   // Update UI Elements
   const sunIcon = sidebarBtnTheme?.querySelector('.theme-icon-light') as HTMLElement;
   const moonIcon = sidebarBtnTheme?.querySelector('.theme-icon-dark') as HTMLElement;
+  const lang = translations[(localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations) || 'en'];
 
   if (theme === 'dark') {
     if (sunIcon) sunIcon.style.display = 'block';
     if (moonIcon) moonIcon.style.display = 'none';
-    if (themeText) themeText.textContent = 'Light Mode';
+    if (themeText) themeText.textContent = lang.lightMode;
   } else {
     if (sunIcon) sunIcon.style.display = 'none';
     if (moonIcon) moonIcon.style.display = 'block';
-    if (themeText) themeText.textContent = 'Dark Mode';
+    if (themeText) themeText.textContent = lang.darkMode;
   }
 
   // Dispatch custom event for Chart.js to react and refresh styling if open
@@ -175,29 +286,120 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
   }
 });
 
+// Apply language to all translatable elements
+const applyLanguage = (languageCode: 'en' | 'th'): void => {
+  localStorage.setItem(LANGUAGE_KEY, languageCode);
+  const lang = translations[languageCode as keyof typeof translations];
+
+  // Update document title
+  document.title = `${lang.appName} - ${lang.dashboard}`;
+
+  // Update app name in sidebar
+  const sidebarTitles = document.querySelectorAll('.sidebar-title');
+  sidebarTitles.forEach(title => {
+    title.textContent = lang.sidebarTitle;
+  });
+
+  // Update theme button text based on current theme
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  if (themeText) {
+    themeText.textContent = currentTheme === 'dark' ? lang.lightMode : lang.darkMode;
+  }
+
+  // Update language button text
+  const langBtnText = document.getElementById('language-btn-text');
+  if (langBtnText) {
+    langBtnText.textContent = languageCode === 'en' ? 'EN/TH' : 'ENG/ไทย';
+  }
+
+  // Update mobile language button text
+  const mobileLangItem = document.getElementById('mobile-btn-language');
+  if (mobileLangItem) {
+    const span = mobileLangItem.querySelector('span');
+    if (span) span.textContent = languageCode === 'en' ? 'EN/TH' : 'ENG/ไทย';
+  }
+
+  // Update all elements with data-translate attribute
+  document.querySelectorAll('[data-translate]').forEach(element => {
+    const key = element.getAttribute('data-translate') as keyof typeof lang;
+    if (lang[key]) {
+      element.textContent = lang[key];
+    }
+  });
+
+  // Update placeholder attributes
+  document.querySelectorAll('[data-translate-placeholder]').forEach(element => {
+    const key = element.getAttribute('data-translate-placeholder') as keyof typeof lang;
+    if (lang[key]) {
+      (element as HTMLInputElement).placeholder = lang[key];
+    }
+  });
+
+  // Update aria-label attributes
+  document.querySelectorAll('[data-translate-aria-label]').forEach(element => {
+    const key = element.getAttribute('data-translate-aria-label') as keyof typeof lang;
+    if (lang[key]) {
+      element.setAttribute('aria-label', lang[key]);
+    }
+  });
+
+  // Update button values
+  document.querySelectorAll('[data-translate-value]').forEach(element => {
+    const key = element.getAttribute('data-translate-value') as keyof typeof lang;
+    if (lang[key]) {
+      (element as HTMLInputElement).value = lang[key];
+    }
+  });
+
+  // Update specific elements that need special handling
+  if (viewTitle) {
+    viewTitle.textContent = lang.activeViewTitle;
+  }
+
+  // API status badge (always connected since URL is hardcoded)
+  const apiBadge = document.getElementById('header-api-status-badge');
+  if (apiBadge) {
+    apiBadge.textContent = lang.connected;
+    apiBadge.setAttribute('title', lang.connected);
+  }
+};
+
+// Initialize language on load
+const initLanguage = () => {
+  const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+  console.log('[Language] initLanguage called, savedLanguage:', savedLanguage);
+  if (savedLanguage === 'en' || savedLanguage === 'th') {
+    console.log('[Language] Using saved language:', savedLanguage);
+    applyLanguage(savedLanguage);
+  } else {
+    // Default to Thai
+    console.log('[Language] No saved language, defaulting to TH');
+    applyLanguage('th');
+  }
+};
+
 // ==========================================================================
-// 4. API Connection Badge Sync
+// 3. API Connection Badge Sync
 // ==========================================================================
 function updateApiStatusIndicator(): void {
   const badge = document.getElementById('header-api-status-badge') as HTMLElement;
   if (!badge) return;
 
-  if (isApiConfigured()) {
-    badge.className = 'api-status status-connected';
-    badge.textContent = 'Connected';
-  } else {
-    badge.className = 'api-status status-unconfigured';
-    badge.textContent = 'Not Connected';
-  }
+  // Always connected since URL is hardcoded
+  badge.className = 'api-status status-connected';
+  const lang = translations[(localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations) || 'en'];
+  badge.textContent = lang.connected;
+  badge.setAttribute('title', lang.connected);
 }
 
 // ==========================================================================
-// 5. Hash Router
+// 4. Hash Router
 // ==========================================================================
 const appContent = document.getElementById('app-content') as HTMLElement;
 const viewTitle = document.getElementById('active-view-title') as HTMLElement;
 
 function handleRouting(): void {
+  console.log('[Routing] handleRouting called');
   // Run cleanup of existing page view
   if (activeViewCleanup) {
     activeViewCleanup();
@@ -206,16 +408,16 @@ function handleRouting(): void {
 
   // Parse page hash (defaults to #dashboard)
   let hash = window.location.hash.slice(1) || 'dashboard';
-  
-  // Clean settings route override on mobile
-  if (hash === 'settings' || hash === 'theme') {
+
+  // Clean theme/language route override on mobile
+  if (hash === 'theme' || hash === 'language') {
     window.location.hash = '#dashboard';
     return;
   }
 
   const validPages: ViewPage[] = ['dashboard', 'form'];
   let activePage: ViewPage = 'dashboard';
-  
+
   if (validPages.includes(hash as ViewPage)) {
     activePage = hash as ViewPage;
   }
@@ -229,25 +431,32 @@ function handleRouting(): void {
     }
   });
 
+  // Remember current language before rendering
+  const currentLang = (localStorage.getItem(LANGUAGE_KEY) as 'en' | 'th') || 'th';
+  const lang = translations[currentLang];
+
   // Switch rendering context
   if (activePage === 'form') {
-    if (viewTitle) viewTitle.textContent = 'Data Entry Form';
-    renderFormPage(appContent, showToast, openSettingsModal);
+    if (viewTitle) viewTitle.textContent = lang.form;
+    renderFormPage(appContent, showToast);
   } else {
-    if (viewTitle) viewTitle.textContent = 'Dashboard';
+    if (viewTitle) viewTitle.textContent = lang.dashboard;
     // Dashboard page returns a cleanup function (which contains refresh timers)
     activeViewCleanup = renderDashboardPage(
-      appContent, 
+      appContent,
       () => { window.location.hash = '#form'; }
     );
   }
+
+  // Re-apply current language to all translatable elements (including newly rendered ones)
+  applyLanguage(currentLang);
 }
 
 // Bind Router Events
 window.addEventListener('hashchange', handleRouting);
 
 // ==========================================================================
-// 6. Application Initializer
+// 5. Application Initializer
 // ==========================================================================
 function init(): void {
   // Apply initial theme
@@ -259,23 +468,36 @@ function init(): void {
     applyTheme(prefersDark ? 'dark' : 'light');
   }
 
+  // Initialize language
+  initLanguage();
+
+  // Attach Language Toggle handlers (must be after DOM ready)
+  const sidebarLangBtn = document.getElementById('sidebar-btn-language');
+  sidebarLangBtn?.addEventListener('click', () => {
+    console.log('[Language] Sidebar language button clicked');
+    const currentLang = localStorage.getItem(LANGUAGE_KEY) || 'th';
+    console.log('[Language] Current language before toggle:', currentLang);
+    const newLang = currentLang === 'en' ? 'th' : 'en';
+    console.log('[Language] New language:', newLang);
+    applyLanguage(newLang as 'en' | 'th');
+  });
+
+  const mobileLangBtn = document.getElementById('mobile-btn-language');
+  mobileLangBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    console.log('[Language] Mobile language button clicked');
+    const currentLang = localStorage.getItem(LANGUAGE_KEY) || 'th';
+    console.log('[Language] Current language before toggle:', currentLang);
+    const newLang = currentLang === 'en' ? 'th' : 'en';
+    console.log('[Language] New language:', newLang);
+    applyLanguage(newLang as 'en' | 'th');
+  });
+
   // Sync initial API connection status indicator
   updateApiStatusIndicator();
 
   // Run Router
   handleRouting();
-
-  // Prompt settings modal on first start if unconfigured
-  if (!isApiConfigured()) {
-    setTimeout(() => {
-      showToast(
-        'Welcome to SheetSync', 
-        'Please configure your Google Apps Script URL in settings to fetch or save spreadsheet data.', 
-        'warning'
-      );
-      openSettingsModal();
-    }, 1200);
-  }
 }
 
 // Start
