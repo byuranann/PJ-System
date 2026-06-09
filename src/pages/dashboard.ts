@@ -331,7 +331,7 @@ export function renderDashboardPage(
     `;
 
     // Add subtle animation to metric values
-    const metricValues = summaryContainer.querySelectorAll('.metric-value');
+    const metricValues = summaryContainer.querySelectorAll<HTMLElement>('.metric-value');
     metricValues.forEach((el, index) => {
       el.style.opacity = '0';
       setTimeout(() => {
@@ -560,7 +560,7 @@ export function renderDashboardPage(
     });
 
     // Enhanced table row interactions
-    const rows = tableWrapper.querySelectorAll('tbody tr');
+    const rows = tableWrapper.querySelectorAll<HTMLElement>('tbody tr');
     rows.forEach(row => {
       row.addEventListener('click', () => {
         // Toggle row selection
@@ -616,7 +616,7 @@ export function renderDashboardPage(
     // --- CHART 1: Trend Line Chart & Bar aggregations ---
     const trendCtx = document.getElementById('trend-analysis-chart') as HTMLCanvasElement;
     if (trendCtx) {
-      renderTrendChart(trendCtx, data, gridColor, textColor, displayFont);
+      renderTrendChart(trendCtx, data, gridColor, textColor, displayFont, isDarkMode);
     }
 
     // --- CHART 2: Category distribution (Pie Chart) ---
@@ -632,8 +632,10 @@ export function renderDashboardPage(
     data: DataRow[],
     gridColor: string,
     textColor: string,
-    displayFont: any
+    displayFont: any,
+    isDarkMode: boolean
   ) => {
+
     // Get current chart type from selector
     chartType = chartTypeSelector.value as 'line' | 'bar';
 
@@ -685,7 +687,7 @@ export function renderDashboardPage(
               yPadding: 8,
               callbacks: {
                 label: (context) => {
-                  const value = context.parsed.y;
+                  const value = context.parsed.y ?? 0;
                   return `Value: ${formatNumber(value)}`;
                 },
                 title: (context) => {
@@ -765,7 +767,7 @@ export function renderDashboardPage(
               yPadding: 8,
               callbacks: {
                 label: (context) => {
-                  const value = context.parsed.y;
+                  const value = context.parsed.y ?? 0;
                   const label = context.label || '';
                   return `${label}: ${formatNumber(value)}`;
                 }
@@ -853,11 +855,11 @@ export function renderDashboardPage(
             labels: {
               color: isDarkMode ? 'hsl(215, 20%, 65%)' : 'hsl(215, 16%, 47%)',
               font: { family: 'Inter', size: 11 },
-              padding: 16,
+              padding: 20,
               usePointStyle: true,
-              pointStyle: 'circle',
-              padding: 20
+              pointStyle: 'circle'
             }
+
           },
           tooltip: {
             padding: 12,
