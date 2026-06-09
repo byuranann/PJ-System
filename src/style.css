@@ -437,7 +437,7 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
-  background-color: var-bg-app);
+  background-color: var(--bg-app);
   z-index: 10;
 }
 
