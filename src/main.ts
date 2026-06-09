@@ -444,6 +444,7 @@ function handleRouting(): void {
     // Dashboard page returns a cleanup function (which contains refresh timers)
     activeViewCleanup = renderDashboardPage(
       appContent,
+      showToast,
       () => { window.location.hash = '#form'; }
     );
   }
