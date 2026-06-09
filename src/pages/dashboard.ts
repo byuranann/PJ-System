@@ -29,7 +29,8 @@ const translations = {
     refresh: 'Refresh',
     refreshingIn: 'Refreshing in',
     seconds: 's',
-    retry: 'Retry'
+    retry: 'Retry',
+    searchPlaceholder: 'Search rows...'
   },
   th: {
     totalRecords: 'จำนวนรายการทั้งหมด',
@@ -52,7 +53,8 @@ const translations = {
     refresh: 'รีเฟรช',
     refreshingIn: 'กำลังรีเฟรชในอีก',
     seconds: 'วินาที',
-    retry: 'ลองใหม่'
+    retry: 'ลองใหม่',
+    searchPlaceholder: 'ค้นหาแถว...'
   }
 };
 
@@ -683,7 +685,7 @@ export function renderDashboardPage(
               borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
               borderWidth: 1,
               cornerRadius: 4,
-              padding: { x: 8, y: 8 },
+              
               callbacks: {
                 label: (context) => {
                   const value = context.parsed.y ?? 0;
@@ -762,7 +764,7 @@ export function renderDashboardPage(
               borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
               borderWidth: 1,
               cornerRadius: 4,
-              padding: { x: 8, y: 8 },
+              
               callbacks: {
                 label: (context) => {
                   const value = context.parsed.y ?? 0;
@@ -869,7 +871,7 @@ export function renderDashboardPage(
             borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
             borderWidth: 1,
             cornerRadius: 4,
-            padding: { x: 8, y: 8 },
+            
             callbacks: {
               label: (context) => {
                 const value = context.parsed;
