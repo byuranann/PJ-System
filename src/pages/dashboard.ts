@@ -683,8 +683,7 @@ export function renderDashboardPage(
               borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
               borderWidth: 1,
               cornerRadius: 4,
-              xPadding: 8,
-              yPadding: 8,
+              padding: { x: 8, y: 8 },
               callbacks: {
                 label: (context) => {
                   const value = context.parsed.y ?? 0;
@@ -763,8 +762,7 @@ export function renderDashboardPage(
               borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
               borderWidth: 1,
               cornerRadius: 4,
-              xPadding: 8,
-              yPadding: 8,
+              padding: { x: 8, y: 8 },
               callbacks: {
                 label: (context) => {
                   const value = context.parsed.y ?? 0;
@@ -871,11 +869,10 @@ export function renderDashboardPage(
             borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
             borderWidth: 1,
             cornerRadius: 4,
-            xPadding: 8,
-            yPadding: 8,
+            padding: { x: 8, y: 8 },
             callbacks: {
               label: (context) => {
-                const value = context.parsed.y;
+                const value = context.parsed;
                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                 const percentage = ((value as number) / total * 100).toFixed(1);
                 return `${context.label}: ${value} (${percentage}%)`;
@@ -1031,7 +1028,7 @@ export function renderDashboardPage(
         const textColor = isDarkMode ? 'hsl(215, 20%, 65%)' : 'hsl(215, 16%, 47%)';
         const displayFont = { family: 'Outfit, sans-serif', size: 11 };
 
-        renderTrendChart(trendCtx, globalData, gridColor, textColor, displayFont);
+        renderTrendChart(trendCtx, globalData, gridColor, textColor, displayFont, isDarkMode);
 
         // Show feedback
         const selectedOption = chartTypeSelector.selectedOptions[0];
@@ -1065,7 +1062,7 @@ export function renderDashboardPage(
 
       // Show search results count
       if (filteredData.length !== globalData.length) {
-        showToast('Search Results', `${filteredData.length} of ${globalData.length} records match`, 'info');
+        showToast('Search Results', `${filteredData.length} of ${globalData.length} records match`, 'success');
       }
     }, 300);
   });
