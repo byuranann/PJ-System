@@ -22,7 +22,7 @@ const translations = {
     toastSuccessTitle: 'สำเร็จ',
     toastErrorTitle: 'ข้อผิดพลาด',
     toastWarningTitle: 'คำเตือน',
-    validationError: 'ข้อผิดพลาดในการตรวจสอบ',
+    validationError: 'ข้อผ�พลาดในการตรวจสอบ',
     validationErrorMsg: 'กรุณาตรวจสอบฟิลด์ที่ไฮไลต์และลองอีกครั้ง.',
     fieldAError: 'ชนิดสินค้าเป็นสิ่งจำเป็นและไม่สามารถเว้นว่างได้.',
     fieldBError: 'น้ำหนักเป็นสิ่งจำเป็นและต้องเป็นตัวเลขที่ถูกต้อง.',
@@ -142,14 +142,55 @@ export function renderFormPage(
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const btnSubmit = document.getElementById('btn-submit') as HTMLButtonElement;
 
-  // 3. Validation Logic per Field
-  const validateField = (input: HTMLInputElement, errorEl: HTMLElement, errorKey: string) => {
+  // 3. Enhanced Validation Logic with Real-time Feedback
+  const validateField = (input: HTMLInputElement, errorEl: HTMLElement, errorKey: string, isBlurred: boolean = false) => {
+    // Only show visual validation after interaction (blur or submit attempt) OR if we're forcing validation
+    const shouldShowError = isBlurred || input.classList.contains('interacted');
     const isValid = input.checkValidity();
     const currentLang = translations[(localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations) || 'en'];
 
-    if (!isValid) {
+    if (!isValid && shouldShowError) {
       input.classList.add('interacted');
       errorEl.style.display = 'flex';
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', `${input.id}-error`);
+
+      const span = errorEl.querySelector('span');
+      if (span) {
+        if (input.validity.valueMissing) {
+          span.textContent = currentLang[errorKey as keyof typeof currentLang] || `${input.labels?.[0]?.textContent?.replace('*', '').trim() || 'Field'} is required.`;
+        } else if (input.validity.typeMismatch || input.validity.badInput) {
+          span.textContent = currentLang.fieldBError;
+        } else if (input.validity.tooLong) {
+          span.textContent = currentLang.fieldCError;
+        } else {
+          span.textContent = input.validationMessage;
+        }
+      }
+    } else if (isValid || !shouldShowError) {
+      input.classList.remove('interacted');
+      // Only hide error if not blurred (to maintain real-time feedback)
+      if (!isBlurred) {
+        errorEl.style.display = 'none';
+      }
+      input.removeAttribute('aria-invalid');
+      if (!isBlurred) {
+        input.removeAttribute('aria-describedby');
+      }
+    }
+    return isValid;
+  };
+
+  // 4. Real-time Validation on Input (with visual feedback but not forced error display)
+  const validateFieldRealTime = (input: HTMLInputElement, errorEl: HTMLElement, errorKey: string) => {
+    const isValid = input.checkValidity();
+    const currentLang = translations[(localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations) || 'en'];
+
+    // Always update visual state for immediate feedback
+    errorEl.style.display = 'flex'; // Always show the container for consistent layout
+
+    if (!isValid) {
+      input.classList.add('interacted');
       input.setAttribute('aria-invalid', 'true');
 
       const span = errorEl.querySelector('span');
@@ -166,54 +207,62 @@ export function renderFormPage(
       }
     } else {
       input.classList.remove('interacted');
-      errorEl.style.display = 'none';
       input.removeAttribute('aria-invalid');
+      // Still show the container but with success state
+      const span = errorEl.querySelector('span');
+      if (span) {
+        span.textContent = ''; // Clear error message
+      }
     }
+
     return isValid;
   };
 
-  // 4. Attach Validation Timing Listeners (Blur and Input)
-  inputA.addEventListener('blur', () => validateField(inputA, errorA, 'fieldAError'));
-  inputB.addEventListener('blur', () => validateField(inputB, errorB, 'fieldBError'));
-  inputC.addEventListener('blur', () => validateField(inputC, errorC, 'fieldCError'));
+  // 5. Attach Validation Timing Listeners (Blur for formal validation, Input for real-time feedback)
+  inputA.addEventListener('blur', () => validateField(inputA, errorA, 'fieldAError', true));
+  inputB.addEventListener('blur', () => validateField(inputB, errorB, 'fieldBError', true));
+  inputC.addEventListener('blur', () => validateField(inputC, errorC, 'fieldCError', true));
 
-  // Clear errors immediately on input (active typing)
-  const clearErrorOnInput = (input: HTMLInputElement, errorEl: HTMLElement) => {
-    if (input.checkValidity()) {
-      input.classList.remove('interacted');
-      errorEl.style.display = 'none';
-      input.removeAttribute('aria-invalid');
-    }
-  };
-  inputA.addEventListener('input', () => clearErrorOnInput(inputA, errorA));
-  inputB.addEventListener('input', () => clearErrorOnInput(inputB, errorB));
-  inputC.addEventListener('input', () => clearErrorOnInput(inputC, errorC));
+  // Real-time validation on input (provides immediate feedback)
+  inputA.addEventListener('input', () => validateFieldRealTime(inputA, errorA, 'fieldAError'));
+  inputB.addEventListener('input', () => validateFieldRealTime(inputB, errorB, 'fieldBError'));
+  inputC.addEventListener('input', () => validateFieldRealTime(inputC, errorC, 'fieldCError'));
 
-  // Helper to clear form states completely
+  // 6. Helper to clear form states completely
   const resetForm = () => {
     form.reset();
     [inputA, inputB, inputC].forEach(input => {
       input.classList.remove('interacted');
       input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
     });
     [errorA, errorB, errorC].forEach(err => {
       err.style.display = 'none';
+      const span = err.querySelector('span');
+      if (span) span.textContent = '';
     });
+
+    // Focus first field after reset
+    setTimeout(() => inputA.focus(), 100);
   };
 
-  // Clear Button Click Handler
-  btnClear.addEventListener('click', resetForm);
+  // 7. Clear Button Click Handler
+  btnClear.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetForm();
+    showToast('Form Reset', 'All fields have been cleared.', 'warning');
+  });
 
-  // 5. Submit Event Handler
+  // 8. Enhanced Submit Event Handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const currentLang = translations[(localStorage.getItem(LANGUAGE_KEY) as keyof typeof translations) || 'en'];
 
-    // Trigger validation for all fields
-    const isValA = validateField(inputA, errorA, 'fieldAError');
-    const isValB = validateField(inputB, errorB, 'fieldBError');
-    const isValC = validateField(inputC, errorC, 'fieldCError');
+    // Trigger validation for all fields (force blur state for final validation)
+    const isValA = validateField(inputA, errorA, 'fieldAError', true);
+    const isValB = validateField(inputB, errorB, 'fieldBError', true);
+    const isValC = validateField(inputC, errorC, 'fieldCError', true);
 
     if (!isValA || !isValB || !isValC) {
       // Focus the first invalid element
@@ -227,15 +276,24 @@ export function renderFormPage(
 
     // Prepare payload
     const payload = {
-      fieldA: sanitize(inputA.value),
+      fieldA: sanitize(inputA.value.trim()),
       fieldB: Number(inputB.value),
-      fieldC: sanitize(inputC.value)
+      fieldC: sanitize(inputC.value.trim())
     };
 
     // Toggle loading states
     loadingOverlay.classList.add('active');
     btnSubmit.disabled = true;
+    btnSubmit.setAttribute('aria-busy', 'true');
     btnClear.disabled = true;
+    btnClear.setAttribute('aria-disabled', 'true');
+
+    // Update button text to show loading state
+    const originalSubmitText = btnSubmit.textContent;
+    btnSubmit.innerHTML = `
+      <span class="btn-loading-spinner" style="width: 20px; height: 20px; border-width: 2px;"></span>
+      Submitting...
+    `;
 
     try {
       // API call
@@ -257,7 +315,26 @@ export function renderFormPage(
       // Restore states
       loadingOverlay.classList.remove('active');
       btnSubmit.disabled = false;
+      btnSubmit.removeAttribute('aria-busy');
       btnClear.disabled = false;
+      btnClear.removeAttribute('aria-disabled');
+
+      // Restbutton text
+      btnSubmit.innerHTML = originalSubmitText || 'Submit Entry';
     }
   });
+
+  // 9. Enhanced Enter Key Handling
+  form.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      // Ctrl+Enter to submit
+      e.preventDefault();
+      btnSubmit.click();
+    }
+  });
+
+  // 10. Initial focus on load
+  setTimeout(() => {
+    inputA.focus();
+  }, 300);
 }
